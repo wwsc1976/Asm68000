@@ -26,10 +26,6 @@ I used RichTextBox because tabstops are implemented properly. The simpler TextBo
 
 I'm not sure what will happen if text formating is added to the program's edit controls, so insert formatting at your own risk, as long as the compiler doesn't mind it might work?
 
-There is a chance copy and paste from web pages will contain formatting. One could override the control's built in cut and paste to limit it to "Clipboard.Text" only.
-
-You can paste code obtained from web pages into NotePad first to remaove all formatting.
-
 The editor color scheme is white on black, it can be changed in the MainWnd's definition area.
 
 To change the pixel distance between tabs edit the class PanelEditor class contructor method. The line of code for my layout is shown below.
