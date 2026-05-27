@@ -17,6 +17,7 @@ public class PanelEditor : Panel
  public int          ID { get; private set; }
  public RichTextBox  TextCtrl { get; private set; }
  public PictureBox   LineCtrl { get; private set; }
+ public TabPage      TabCtrl { get; private set; }
  public string       Path { get; private set; } = "";
  public string       FileName { get; private set; } = "";
  public string       FileNameSansExt { get; private set; }
@@ -30,12 +31,14 @@ public PanelEditor()
 {
 }
 
-public PanelEditor(MainWnd.TabFocus focus, string path, DateTime created, DateTime chg, ContextMenuStrip menu)
+public PanelEditor(MainWnd.TabFocus focus, TabPage tp, string path, DateTime created, DateTime chg, ContextMenuStrip menu)
 {
  WhichTab = focus;
  ID = NextID++;
 
- Name = "TabPage" + ID.ToString();
+ Name = "pnlPage" + ID.ToString();
+
+ TabCtrl = tp;
 
  TextCtrl = new RichTextBox();
  TextCtrl.Multiline = true;
@@ -61,11 +64,13 @@ public PanelEditor(MainWnd.TabFocus focus, string path, DateTime created, DateTi
  
  TextCtrl.TextChanged += new EventHandler(TextCtrl_Changed);
  TextCtrl.SelectionChanged += new EventHandler(TextCtrl_SelectionChanged);
- TextCtrl.KeyDown += new KeyEventHandler(TextCtrl_KeyDown);
  TextCtrl.VScroll += new EventHandler(TextCtrl_VScroll);
  TextCtrl.Enter += new EventHandler(TextCtrl_Enter);
  TextCtrl.Click += new EventHandler(TextCtrl_Click);
+ TextCtrl.KeyDown += new KeyEventHandler(TextCtrl_KeyDown);
+ TextCtrl.GotFocus += new EventHandler(TextCtrl_GotFocus);
  LineCtrl.Paint += new PaintEventHandler(LineCtrl_Paint);
+ 
 
  Application.DoEvents();
  m_AlterFlag = false;       // change to textctrl would trigger Alterflag true so have to wait and set
@@ -89,13 +94,15 @@ private void SetText(string p, bool changed)
    Path = p;
    FileName = System.IO.Path.GetFileName(p);
    FileNameSansExt = System.IO.Path.GetFileNameWithoutExtension(p);
-   Text = FileName;
-   if (changed == true)
-     Text += "*";
+   TabCtrl.Text = FileName;
   }
  else
   {
-   Text = "New File " + ID.ToString();
+   TabCtrl.Text = "New File " + ID.ToString();
+  }
+ if (changed == true)
+  {
+   TabCtrl.Text = "<" + TabCtrl.Text + ">";
   }
 }
 
@@ -127,7 +134,7 @@ public bool Save()
   {
    dlg = new SaveFileDialog();
    dlg.InitialDirectory = MainWnd.LastDirectory;
-   dlg.Filter = "Assembler File (*.x68)|*.x68";
+   dlg.Filter = "Assembler File (*.s)|*.s";
    dr = dlg.ShowDialog();
    if (dr == DialogResult.OK)
     {
@@ -188,7 +195,7 @@ public bool SaveAs()
 
  dlg = new SaveFileDialog();
  dlg.InitialDirectory = MainWnd.LastDirectory;
- dlg.Filter = "Assembler File (*.x68)|*.x68";
+ dlg.Filter = "Assembler File (*.s)|*.s";
  dr = dlg.ShowDialog();
  tp = "";
  if (dr == DialogResult.OK)
@@ -237,6 +244,35 @@ public bool SaveAs()
    Text = FileName;
   }
  return success;
+}
+
+public void Copy() 
+{
+ TextCtrl.Copy();
+}
+
+public void Cut() 
+{
+ TextCtrl.Cut();
+ LineCtrl.Refresh();
+}
+
+public void Paste() 
+{
+ TextCtrl.Paste(DataFormats.GetFormat(DataFormats.UnicodeText));
+ LineCtrl.Refresh();
+}
+
+private void TextCtrl_KeyDown(object sender, KeyEventArgs e)
+{
+ if (e.Control == false)
+   return;
+
+ if (e.KeyCode == Keys.C || e.KeyCode == Keys.V || e.KeyCode == Keys.P)
+  {
+   e.Handled = true;
+   e.SuppressKeyPress = true;
+  }
 }
 
 
@@ -323,15 +359,6 @@ private void TextCtrl_VScroll(object sender, EventArgs e)
  LineCtrl.Refresh();
 }
 
-private void TextCtrl_KeyDown(object sender, KeyEventArgs e) 
-{
- if (e.KeyCode == Keys.V && e.Modifiers == Keys.Control) 
-  {
-   TextCtrl.Paste(DataFormats.GetFormat(DataFormats.UnicodeText));
-   e.Handled = true;
-  }
-}
-
 private void TextCtrl_Enter(object sender, EventArgs e)
 {
  MainWnd.WhichTab = WhichTab;
@@ -340,6 +367,11 @@ private void TextCtrl_Enter(object sender, EventArgs e)
 private void TextCtrl_Click(object sender, EventArgs e)
 {
  MainWnd.WhichTab = WhichTab;
+}
+
+private void TextCtrl_GotFocus(object sender, EventArgs e)
+{
+ ((TabControl)TabCtrl.Parent).SelectedTab = TabCtrl;
 }
 
 };

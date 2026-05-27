@@ -5,14 +5,13 @@ using System.Drawing;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-
 
 namespace Asm68000
 {
 public partial class MainWnd : Form
 {
  public enum TabFocus { Left, Right };
+
  public static ApplicationSettings Settings = new ApplicationSettings("Asm68000");
  public static Font TextFont = new Font(FontFamily.GenericMonospace, 12, FontStyle.Regular);
  public static Color TextBackColor = Color.FromArgb(10,10,20);
@@ -51,14 +50,6 @@ public MainWnd()
   Size = sz;
   }
 
- splitMain.Dock = DockStyle.Fill;
- splitEdit.Dock = DockStyle.Fill;
-
- txtFeedback.Dock = DockStyle.Fill;
-
- splitMain.SplitterDistance = Settings.GetInt("SplitMain");
- splitEdit.SplitterDistance = Settings.GetInt("SplitEdit");
-
  c = Settings.GetInt("PreviousCount");
  if (c > 0)
     mnuFile.DropDownItems.Add(new ToolStripSeparator());
@@ -80,6 +71,8 @@ protected override void OnActivated(EventArgs e)
  base.OnActivated(e);
  if (m_Ready == false)
   {
+   splitMain.SplitterDistance = Settings.GetInt("SplitMain");
+   splitEdit.SplitterDistance = Settings.GetInt("SplitEdit");
    DoSize();
    m_Ready = true;
   }
@@ -93,21 +86,6 @@ protected override void OnSizeChanged(EventArgs e)
 
 private void DoSize()
 {
- //splitMain.Top = menuStrip1.Height;
- //splitMain.Left = 0;
- //splitMain.Width = ClientSize.Width;
- //splitMain.Height = ClientSize.Height - menuStrip1.Height;
-
- //tabCtrlLeft.Top = 0;
- //tabCtrlLeft.Left = 0;
- //tabCtrlLeft.Width = splitEdit.Panel1.ClientSize.Width;
- //tabCtrlLeft.Height = splitEdit.Panel1.ClientSize.Height;
-
- //tabCtrlRight.Top = 0;
- //tabCtrlRight.Left = 0;
- //tabCtrlRight.Width = splitEdit.Panel1.ClientSize.Width;
- //tabCtrlRight.Height = splitEdit.Panel1.ClientSize.Height;
-
 }
 
 protected override void OnClosing(CancelEventArgs e)
@@ -190,7 +168,13 @@ private void ActionOpenFile(string path)
    default: throw new Exception("huh?");
   }
 
- tpa = new PanelEditor(WhichTab, path, created, modified, mnuTextBox);
+
+ if (tabCtrl.TabPages[0].Controls.Count == 0)
+   tabCtrl.TabPages.Clear();
+
+ tp = new TabPage();
+
+ tpa = new PanelEditor(WhichTab, tp, path, created, modified, mnuTextCtrl);
 
  if (read != null)
   {
@@ -200,15 +184,9 @@ private void ActionOpenFile(string path)
    tpa.AlterFlag = false;
   }
 
- tp = tabCtrl.TabPages[0];
-
- if (tp.Controls.Count == 0)
-   tabCtrl.TabPages.Clear();
-
- tp = new TabPage();
- tp.Text = tpa.FileName;
  tp.Controls.Add(tpa);
  tabCtrl.TabPages.Add(tp);
+
  tabCtrl.SelectedIndex = tabCtrl.TabPages.Count - 1;
 
  if (m_Previous.ContainsKey(tpa.Path) == false)
@@ -313,7 +291,7 @@ private class PreviousSort : IComparer<PreviousItem>
 
 private void AlignText()
 {
- 
+ // what was this for?
 }
 
 public PanelEditor GetCurrentPanel()
@@ -331,7 +309,7 @@ public PanelEditor GetCurrentPanel()
  if (tab.TabPages.Count == 0)
    return null;
 
- if (tab.TabPages[0].Controls.Count == 0)
+ if (tab.TabPages[tab.SelectedIndex].Controls.Count == 0)
    return null;
 
  tpa = (PanelEditor)tab.TabPages[tabCtrlLeft.SelectedIndex].Controls[0];
@@ -367,7 +345,7 @@ private void mnuFileOpen_Click(object sender, EventArgs e)
  dlg = new OpenFileDialog();
  dlg.InitialDirectory = LastDirectory;
  dlg.Multiselect = false;
- dlg.Filter = "Assembler File (*.x68)|*.x68";
+ dlg.Filter = "Assembler File (*.s)|*.s";
  dlg.ShowDialog();
   {
    ActionOpenFile(dlg.FileName);
@@ -463,29 +441,7 @@ private void mnuFileCloseAll_Click(object sender, EventArgs e)
 
 private void mnuFileExit_Click(object sender, EventArgs e)
 {
- PanelEditor pe;
- bool success = true;
-
- foreach(TabPage tpa in tabCtrlLeft.TabPages)
-  {
-   pe = (PanelEditor)tpa.Controls[0];
-   if (pe.Controls.Count > 0)
-    {
-     if (ActionCloseFile(tabCtrlLeft, pe) == false)
-       success = false;
-    }
-  }
- foreach(TabPage tpa in tabCtrlRight.TabPages)
-  {
-   pe = (PanelEditor)tpa.Controls[0];
-   if (pe.Controls.Count > 0)
-    {
-     if (ActionCloseFile(tabCtrlRight, pe) == false)
-       success = false;
-    }
-  }
-if (success == true)
-  Close();
+ Close();
 }
 
 private void mnuEditTextAlign_Click(object sender, EventArgs e)
@@ -529,7 +485,7 @@ private void mnuActionCompile_Click(object sender, EventArgs e)
     }
   }
 
-// e:\Assembler\Source\%1.x68 -Ftos -o e:\Assembler\Run\%1.TOS -L e:\Assembler\Listout\%1.txt
+// e:\Assembler\Source\%1.s -Ftos -o e:\Assembler\Run\%1.TOS -L e:\Assembler\Listout\%1.txt
 
  exe = "e:\\Assembler\\vbcc\\bin\\vasmm68k_mot.exe";
  src = '\"' + tpa.Path + '\"';
@@ -587,7 +543,7 @@ private void mnuActionRun_Click(object sender, EventArgs e)
     }
   }
 
-// e:\Assembler\Source\%1.x68 -Ftos -o e:\Assembler\Run\%1.TOS -L e:\Assembler\Listout\%1.txt
+// e:\Assembler\Source\%1.s -Ftos -o e:\Assembler\Run\%1.TOS -L e:\Assembler\Listout\%1.txt
 
  exe = "e:\\Assembler\\hatari\\hatari.exe";
  obj = "e:\\Assembler\\Run\\" + tpa.FileNameSansExt + ".TOS" + '\"';
@@ -886,7 +842,7 @@ private void splitEdit_SplitterMoved(object sender, SplitterEventArgs e)
 
 private void txtFeedback_DoubleClick(object sender, EventArgs e)
 {
- // error 2 in line 77 of "E:\Assembler\Source\new_flip.x68": unknown mnemonic <error>
+ // error 2 in line 77 of "E:\Assembler\Source\new_flip.s": unknown mnemonic <error>
 
  PanelEditor pta;
  string line, ws;
@@ -925,6 +881,144 @@ if (line.Length < 5)
 
  pta.SelectLine(lineNum);
 
+}
+
+private void mnuEditCopy_Click(object sender, EventArgs e)
+{
+ PanelEditor pta = GetCurrentPanel();
+
+ if (pta != null)
+   pta.Copy();
+}
+
+private void mnuEditPaste_Click(object sender, EventArgs e)
+{
+ PanelEditor pta = GetCurrentPanel();
+ if (pta != null)
+   pta.Paste();
+}
+
+private void mnuEditCut_Click(object sender, EventArgs e)
+{
+ PanelEditor pta = GetCurrentPanel();
+
+ if (pta != null)
+   pta.Cut();
+}
+
+private void mnuTextCtrl_Opening(object sender, CancelEventArgs e)
+{
+ PanelEditor tpa = GetCurrentPanel();
+
+ mnuTextCtrlSave.Enabled = (tpa != null);
+ mnuTextCtrlSaveAs.Enabled = (tpa != null);
+ mnuTextCtrlClose.Enabled = (tpa != null);
+ mnuTextCtrlCopy.Enabled = (tpa != null);
+ mnuTextCtrlCut.Enabled = (tpa != null);
+ mnuTextCtrlPaste.Enabled = (tpa != null);
+ mnuTextCtrlCompile.Enabled = (tpa != null);
+ mnuTextCtrlRun.Enabled = (tpa != null);
+}
+
+private void mnuTextCtrlOpen_Click(object sender, EventArgs e)
+{
+ mnuFileOpen_Click(sender, e);
+}
+
+private void mnuTextCtrlSave_Click(object sender, EventArgs e)
+{
+ mnuFileSave_Click(sender, e);
+}
+
+private void mnuTextCtrlSaveAs_Click(object sender, EventArgs e)
+{
+ mnuFileSaveAs_Click(sender, e);
+}
+
+private void mnuTextCtrlClose_Click(object sender, EventArgs e)
+{
+ mnuFileClose_Click(sender, e);
+}
+
+private void mnuTextCtrlCopy_Click(object sender, EventArgs e)
+{
+ mnuEditCopy_Click(sender, e);
+}
+
+private void mnuTextCtrlCut_Click(object sender, EventArgs e)
+{
+ mnuEditCut_Click(sender, e);
+}
+
+private void mnuTextCtrlPaste_Click(object sender, EventArgs e)
+{
+ mnuEditPaste_Click(sender, e);
+}
+
+private void mnuTextCtrlCompile_Click(object sender, EventArgs e)
+{
+ mnuActionCompile_Click(sender, e);
+}
+
+private void mnuTextCtrlRun_Click(object sender, EventArgs e)
+{
+ mnuActionRun_Click(sender, e);
+}
+
+private void mnuActionClearPrevious_Click(object sender, EventArgs e)
+{
+ DialogResult r = MessageBox.Show("Reset Previous Menu?", "Reset", MessageBoxButtons.OKCancel, MessageBoxIcon.Question);
+ if (r != DialogResult.OK)
+   return;
+
+ Settings.SaveSetting("PreviousCount", 0);
+ MessageBox.Show("Restart program to reset the menu");
+}
+
+private void mnuFile_DropDownOpening(object sender, EventArgs e)
+{
+ PanelEditor pe;
+ string whichSide = "";
+
+ switch(WhichTab)
+  {
+   case TabFocus.Left: whichSide = "Left"; break;
+   case TabFocus.Right: whichSide = "Right"; break;
+  }
+
+ mnuFileNew.Text = "New File On " + whichSide;
+ mnuFileOpen.Text = "Open File On " + whichSide;
+
+ pe = GetCurrentPanel(); 
+ if (pe == null)
+  {
+   mnuFileSave.Enabled = false;
+   mnuFileSaveAs.Enabled = false;
+   mnuFileClose.Enabled = false;
+  }
+ else
+  {
+   mnuFileSave.Enabled = true;
+   mnuFileSaveAs.Enabled = true;
+   mnuFileClose.Enabled = true;
+   if (pe.FileName == "")
+    {
+     mnuFileSave.Text = "Save New File On " + whichSide ;
+     mnuFileSaveAs.Enabled = false;
+     mnuFileClose.Text = "Close File On " + whichSide;
+    }
+   else
+    {
+     mnuFileSave.Text = "Save " + whichSide + " File " + pe.FileName;
+     mnuFileSaveAs.Text = "Save " + whichSide + " File " + pe.FileName + " As";
+     mnuFileClose.Text = "Close " + whichSide + " File " + pe.FileName;
+    }
+  }
+}
+
+private void mnuTextCtrlNew_Click(object sender, EventArgs e)
+{
+ mnuFileNew_Click(sender, e);
 }
 
 };
